@@ -38,7 +38,6 @@ The project consists of a **Flask-based backend**, a **React.js frontend**, and 
  ┃ ┣ 📜 api.js  (Handles communication with backend)
  ┣ 📜 train.py  (Script to train the AI model using Deep Q-Learning)
  ┣ 📜 README.md  (Project documentation)
- ┣ 📜 .gitignore  (GitHub ignore files)
 ```
 
 ---
@@ -75,7 +74,7 @@ The project consists of a **Flask-based backend**, a **React.js frontend**, and 
 
 ### **1️⃣ Clone the Repository**  
 ```bash
-git clone https://github.com/YOUR-USERNAME/chess-rl.git
+git clone https://github.com/Harsha-2604/Minor-Project.git
 cd chess-rl
 ```
 
