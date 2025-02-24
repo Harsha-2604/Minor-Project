@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Arcane Chess</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='chessboard-0.3.0.min.css') }}">
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="{{ url_for('static', filename='chessboard-0.3.0.min.js') }}"></script>
+   <script src="{{ url_for('static', filename='chess.js/chess.min.js') }}"></script>
+   <script src="{{ url_for('static', filename='particles.js') }}"></script>
+   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js"></script>
+   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css">
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+      <div id="particles-js"></div>
+      <ul class="nav justify-content-center border-bottom-0 toto-top">
+          <li class="nav-item">
+            <a class="nav-link text-info " href="app\templates\random.html">Random VS Random</a>
+          </li>
+          <li class="nav-item border-bottom-0">
+            <a class="nav-link text-info active" href="/">Reinforced Agent</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-info" href="minimax">Minimax Alpha-Beta</a>
+          </li>
+        </ul>
+    <div class="container-fluid">
+      <div class="row justify-content-center" style="padding-bottom: -300px;">
+        <div class="centered center-screen"id="board" style="width: 400px;height: 400px;"></div>
+      </div>
+      <div class="row justify-content-center text-light" > <p>Status: <span id="status"></span></p></div> 
+      <div class="row justify-content-center text-light"><a href="https://github.com/raysr/openChess" class="fa fa-github"></a></div>
+      
+     </div>
+  </div>  
+
+    <script defer="defer">
+
+      //backgroud theme
+  particlesJS('particles-js',
+  
+  {
+    "particles": {
+      "number": {
+        "value": 80,
+        "density": {
+          "enable": true,
+          "value_area": 800
+        }
+      },
+      "color": {
+        "value": "#ffffff"
+      },
+      "shape": {
+        "type": "circle",
+        "stroke": {
+          "width": 0,
+          "color": "#b1bac9"
+        },
+        "polygon": {
+          "nb_sides": 5
+        },
+        "image": {
+          "src": "img/github.svg",
+          "width": 100,
+          "height": 100
+        }
+      },
+      "opacity": {
+        "value": 0.5,
+        "random": false,
+        "anim": {
+          "enable": false,
+          "speed": 1,
+          "opacity_min": 0.1,
+          "sync": false
+        }
+      },
+      "size": {
+        "value": 5,
+        "random": true,
+        "anim": {
+          "enable": false,
+          "speed": 40,
+          "size_min": 0.1,
+          "sync": false
+        }
+      },
+      "line_linked": {
+        "enable": true,
+        "distance": 150,
+        "color": "#ffffff",
+        "opacity": 0.4,
+        "width": 1
+      },
+      "move": {
+        "enable": true,
+        "speed": 6,
+        "direction": "none",
+        "random": false,
+        "straight": false,
+        "out_mode": "out",
+        "attract": {
+          "enable": false,
+          "rotateX": 600,
+          "rotateY": 1200
+        }
+      }
+    },
+    "interactivity": {
+      "detect_on": "canvas",
+      "events": {
+        "onhover": {
+          "enable": true,
+          "mode": "repulse"
+        },
+        "onclick": {
+          "enable": true,
+          "mode": "push"
+        },
+        "resize": true
+      },
+      "modes": {
+        "grab": {
+          "distance": 400,
+          "line_linked": {
+            "opacity": 1
+          }
+        },
+        "bubble": {
+          "distance": 400,
+          "size": 40,
+          "duration": 2,
+          "opacity": 8,
+          "speed": 3
+        },
+        "repulse": {
+          "distance": 200
+        },
+        "push": {
+          "particles_nb": 4
+        },
+        "remove": {
+          "particles_nb": 2
+        }
+      }
+    },
+    "retina_detect": true,
+    "config_demo": {
+      "hide_card": false,
+      "background_color": "#b61924",
+      "background_image": "",
+      "background_position": "50% 50%",
+      "background_repeat": "no-repeat",
+      "background_size": "cover"
+    }
+  }
+
+);
+   
+
+//object game and jquery(getting) status id from html
+var board,
+  game = new Chess();
+  statusEl = $('#status');
+
+// do not pick up pieces if the game is over
+// only pick up pieces for White
+//dragging white avoiding black
+var onDragStart = function(source, piece, position, orientation) {
+  console.log("deek",position);
+  if (game.in_checkmate() === true || game.in_draw() === true ||
+    piece.search(/^b/) !== -1) {
+    return false;
+  }
+};
+
+
+//points fro peices for power
+pawn=10
+knight=30
+bishop=30
+tower=50
+queen=90
+king=900
+
+
+// converting into chess notation like a1...
+cases=[]
+for(i=1;i<9;i++)
+{
+  for(j=0;j<8;j++)
+  {cases[(i-1)*8+j]=(j+10).toString(36)+i;}
+}
+console.log(cases);
+
+
+
+function logGameState(message) {
+  console.log('=== ' + message + ' ===');
+  console.log('FEN:', game.fen());
+  console.log('Turn:', game.turn());
+  console.log('Valid moves:', game.moves());
+  console.log('Board position:', board.position());
+}
+
+
+// var updateStatus = function() {
+//   var status = '';
+
+//   var moveColor = 'White';
+//   if (game.turn() === 'b') {
+//     moveColor = 'Black';
+//   }
+
+//   // checkmate?
+//   if (game.in_checkmate() === true) {
+//     status = 'Game over, ' + moveColor + ' is in checkmate.';
+//   }
+
+//   // draw?
+//   else if (game.in_draw() === true) {
+//     status = 'Game over, drawn position';
+//   }
+
+//   // game still on
+//   else {
+//     status = moveColor + ' to move';
+
+//     // check?
+//     if (game.in_check() === true) {
+//       status += ', ' + moveColor + ' is in check';
+//     }
+//   }
+
+//   statusEl.html(status);
+// };
+
+
+
+//updating the status according to situtation
+var updateStatus = function() {
+  var status = '';
+  var moveColor = 'White';
+  if (game.turn() === 'b') {
+    moveColor = 'Black';
+  }
+
+  if (game.in_checkmate() === true) {
+    status = 'Game over, ' + moveColor + ' is in checkmate.';
+  } else if (game.in_draw() === true) {
+    status = 'Game over, drawn position';
+  } else {
+    status = moveColor + ' to move';
+    if (game.in_check() === true) {
+      status += ', ' + moveColor + ' is in check';
+    }
+  }
+  //seting status on status id in html
+  statusEl.html(status);
+};
+
+
+
+var removeGreySquares = function() {
+  $('#board .square-55d63').css('background', '');
+};
+
+var greySquare = function(square) {
+  var squareEl = $('#board .square-' + square);
+
+  var background = '#a9a9a9';
+  if (squareEl.hasClass('black-3c85d') === true) {
+    background = '#696969';
+  }
+
+  squareEl.css('background', background);
+};
+
+var onMouseoverSquare = function(square, piece) {
+  // get list of possible moves for this square
+  var moves = game.moves({
+    square: square,
+    verbose: true
+  });
+
+  // exit if there are no moves available for this square
+  if (moves.length === 0) return;
+
+  // highlight the square they moused over
+  greySquare(square);
+
+  // highlight the possible squares for this piece
+  for (var i = 0; i < moves.length; i++) {
+    greySquare(moves[i].to);
+  }
+};
+var onMouseoutSquare = function(square, piece) {
+  removeGreySquares();
+};
+
+var onSnapEnd = function() {
+  console.log("onSnapEnd",game.fen());
+  board.position(game.fen());
+};
+
+// function sendState(state, cb)
+// {
+//    var qurl="send_move";
+//    console.log("fen : "+state)
+//    $.ajax({
+//             type: "POST",
+//             cache: false,
+//             data:JSON.stringify({"fen":state,"turn":game.turn()}),
+//             url: qurl,
+//             contentType: 'application/json;charset=UTF-8',
+//             success: function(data) {
+
+//                 console.log(data);
+//                 return cb(data);             
+//             },
+//             error: function(jqXHR, data) {
+//                 alert("error: " + jqXHR.status+"sending : "+data);
+//                 console.log(data);
+
+//             }
+//         })
+// }
+
+function sendState(state) {
+  console.log('Sending state to backend:', {
+    fen: state,
+    turn: game.turn()
+  });
+  
+  return new Promise((resolve, reject) => {
+    $.ajax({
+      type: "POST",
+      cache: false,
+      data: JSON.stringify({"fen": state, "turn": game.turn()}),
+      url: "send_move",
+      contentType: 'application/json;charset=UTF-8',
+      success: function(response) {
+        console.log('Raw backend response:', response);
+        // Check if response is a string and needs parsing
+        if (typeof response === 'string') {
+          try {
+            response = JSON.parse(response);
+          } catch (e) {
+            console.log('Response is a string but not JSON:', response);
+          }
+        }
+        resolve(response);
+      },
+      error: function(jqXHR, textStatus, errorThrown) {
+        console.error('Backend request failed:', {
+          status: jqXHR.status,
+          textStatus: textStatus,
+          error: errorThrown
+        });
+        reject(errorThrown);
+      }
+    });
+  });
+}
+
+
+// var makeRandomMove = function() {
+//   var possibleMoves = game.moves();
+  
+//   // exit if the game is over
+//   if (game.game_over() === true ||
+//     game.in_draw() === true ||
+//     possibleMoves.length === 0) return;
+//   var bMove;
+//   sendState(game.fen(), (bestMove)=>
+//   {
+//     bMove=bestMove;
+//   game.move(bMove,{sloppy: true});
+//   board.position(game.fen());
+
+//   });
+
+
+// };
+
+function makeRandomMove() {
+  logGameState('Before AI move');
+  
+  if (game.game_over()) {
+    console.log('Game is over - no AI move made');
+    return;
+  }
+
+  sendState(game.fen())
+    .then(function(response) {
+      console.log('Processing AI response:', response);
+      
+      // Try to handle different response formats
+      let moveToMake;
+      if (typeof response === 'string') {
+        moveToMake = response.trim();
+      } else if (response.hasOwnProperty('move')) {
+        moveToMake = response.move;
+      } else if (response.hasOwnProperty('from') && response.hasOwnProperty('to')) {
+        moveToMake = response;
+      }else if (response.hasOwnProperty('best_move')) { // Add this check
+        moveToMake = response.best_move; // Set moveToMake to the best_move value
+      }else {
+        console.error('Unrecognized move format:', response);
+        return;
+      }
+
+      console.log('Attempting to make move:', moveToMake);
+      
+      try {
+        // Try different move formats
+        let moveResult = null;
+        
+        if (typeof moveToMake === 'string' && moveToMake.length >= 4) {
+          // Try as a string move like 'e2e4'
+          moveResult = game.move({
+            from: moveToMake.substring(0, 2),
+            to: moveToMake.substring(2, 4),
+            promotion: moveToMake.length > 4 ? moveToMake[4] : 'q'
+          });
+        }
+        
+        if (!moveResult) {
+          // Try as a direct move object
+          moveResult = game.move(moveToMake);
+        }
+        
+        if (!moveResult) {
+          // Try with sloppy move option
+          moveResult = game.move(moveToMake, { sloppy: true });
+        }
+
+        console.log('Move result:', moveResult);
+        
+        if (moveResult) {
+          console.log('Move successful, updating board...');
+          board.position(game.fen(), true); // true forces animation
+          updateStatus();
+          logGameState('After AI move');
+        } else {
+          console.error('Move was invalid:', moveToMake);
+        }
+      } catch (error) {
+        console.error('Error making move:', error);
+      }
+    })
+    .catch(function(error) {
+      console.error('Error in AI move:', error);
+    });
+}
+
+// var onDrop = function(source, target) {
+//   // see if the move is legal
+//   var move = game.move({
+//     from: source,
+//     to: target,
+//     promotion: 'q' // NOTE: always promote to a queen for example simplicity
+//   });
+
+//   // illegal move
+//   if (move === null) return 'snapback';
+
+//   updateStatus();
+//   // make random legal move for black
+//   window.setTimeout(makeRandomMove, 250);
+  
+// };
+
+
+var onDrop = function(source, target) {
+  logGameState('Before player move');
+  
+  console.log('Player attempting move:', {
+    from: source,
+    to: target
+  });
+
+  var move = game.move({
+    from: source,
+    to: target,
+    promotion: 'q'
+  });
+
+  if (move === null) {
+    console.log('Invalid move attempted');
+    return 'snapback';
+  }
+
+  console.log('Player move completed:', move);
+  board.position(game.fen());
+  updateStatus();
+  
+  logGameState('After player move');
+
+  // Add a small delay before AI move
+  window.setTimeout(makeRandomMove, 250);
+};
+
+
+// update the board position after the piece snap
+// for castling, en passant, pawn promotion
+var onSnapEnd = function() {
+  board.position(game.fen());
+};
+
+
+
+
+var cfg = {
+  draggable: true,
+  position: 'start',
+  onDragStart: onDragStart,
+  onDrop: onDrop,
+  onMouseoutSquare: onMouseoutSquare,
+  onMouseoverSquare: onMouseoverSquare,
+  onSnapEnd: onSnapEnd
+};
+board = ChessBoard('board', cfg);
+updateStatus();
+    </script>
+  </body>
+</html>
